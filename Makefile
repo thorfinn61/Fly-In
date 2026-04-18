@@ -1,6 +1,7 @@
 PYTHON = python3
 PIP = pip3
-MAIN = main.py
+MAIN = src/main.py
+MAP ?= maps/easy/01_linear_path.txt
 
 .PHONY: install run debug clean lint lint-strict
 
@@ -8,10 +9,10 @@ install:
 	$(PIP) install -r requirements.txt
 
 run:
-	$(PYTHON) $(MAIN)
+	$(PYTHON) $(MAIN) $(MAP)
 
 debug:
-	$(PYTHON) -m pdb $(MAIN)
+	$(PYTHON) -m pdb $(MAIN) $(MAP)
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -21,9 +22,9 @@ clean:
 	find . -name "*.pyo" -delete
 
 lint:
-	flake8 .
-	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	flake8 src tests
+	mypy src
 
 lint-strict:
-	flake8 .
-	mypy . --strict
+	flake8 src tests
+	mypy src --strict
