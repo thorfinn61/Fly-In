@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple, List
+from models import Graph, Zone, Connection, Drone
 
 class MapParser:
     def __init__(self, path: str) -> None:
@@ -127,3 +128,36 @@ class MapParser:
                 raise ValueError(f"Ligne {line_num}: Zone inconnue dans la connexion '{zone1}-{zone2}'.")
             
             self.connections.append((zone1, zone2, capacity))
+
+    def build_models(self) -> Tuple[Graph, List[Drone]]:
+        graph = Graph()
+        drones = []
+
+        all_hubs_raw = self.hubs.copy()
+        if self.start_hub:
+            all_hubs_raw.append(self.start_hub)
+        if self.end_hub:
+            all_hubs_raw.append(self.end_hub)
+            
+        for name, coords, meta in all_hubs_raw:
+            zone_type = meta.get("zone", "normal")
+            color = meta.get("color", "none")
+            max_drones = int(meta.get("max_drones", 1))
+            
+            zone_obj = Zone(name=name, x=coords[0], y=coords[1], zone_type=zone_type, color=color, max_drones=max_drones)
+            graph.add_zone(zone_obj)
+            
+        for z1, z2, capacity in self.connections:
+            conn_obj = Connection(zone1=z1, zone2=z2, max_link_capacity=capacity)
+            graph.add_connection(conn_obj)
+            
+        start_zone_name = self.start_hub[0] if self.start_hub else None
+        
+        for i in range(self.nb_drones):
+            drone_obj = Drone(drone_id=i+1, current_zone=start_zone_name)
+            drones.append(drone_obj)
+            # Ajouter les drones direct dans la zone de départ si elle existe
+            if start_zone_name and start_zone_name in graph.zones:
+                graph.zones[start_zone_name].drones.append(drone_obj.id)
+                
+        return graph, drones
