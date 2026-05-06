@@ -103,24 +103,59 @@ class Graph:
         self._path_cache[cache_key] = path
         return path
 
-    def find_disjoint_paths(self, start: str, end: str, max_paths: int = 3) -> List[List[str]]:
+    def find_disjoint_paths(self, start: str, end: str, max_paths: int = 5) -> List[List[str]]:
         paths = []
-        avoid_zones = []
+        penalty_weights = {node: 0.0 for node in self.zones}
         
         for _ in range(max_paths):
-            new_path = self.find_shortest_path(start, end, avoid_zones)
-            if not new_path:
-                break # Plus de chemin disponible
-                
-            paths.append(new_path)
-            
-            # Ajouter les noeuds intermédiaires de ce chemin aux zones à éviter
-            # On n'ajoute ni le noeud de départ, ni le noeud d'arrivée
-            for node in new_path[1:-1]:
-                if node not in avoid_zones:
-                    avoid_zones.append(node)
+            # Custom Dijkstra with soft penalties instead of strict avoidance
+            distances = {node: float('inf') for node in self.zones}
+            distances[start] = 0.0
+            previous_nodes = {node: None for node in self.zones}
+            pq = [(0.0, start)]
+
+            while pq:
+                current_distance, current_zone = heapq.heappop(pq)
+                if current_zone == end: break
+                if current_distance > distances[current_zone]: continue
+
+                for neighbor in self.adjacency.get(current_zone, []):
+                    neighbor_zone = self.zones[neighbor]
+                    if neighbor_zone.zone_type == "blocked": continue
+
+                    cost = 1.0
+                    if neighbor_zone.zone_type == "restricted": cost = 2.0
+                    elif neighbor_zone.zone_type == "priority": cost = 0.9
                     
-        return paths
+                    # Add penalty for load balancing
+                    cost += penalty_weights.get(neighbor, 0.0)
+
+                    distance = current_distance + cost
+                    if distance < distances[neighbor]:
+                        distances[neighbor] = distance
+                        previous_nodes[neighbor] = current_zone
+                        heapq.heappush(pq, (distance, neighbor))
+
+            if distances[end] == float('inf'): break
+
+            # Rebuild path
+            path = []
+            curr = end
+            while curr is not None:
+                path.append(curr)
+                curr = previous_nodes[curr]
+            path.reverse()
+            
+            # Use path if it's new, else just break to avoid infinite useless loops
+            if path not in paths:
+                paths.append(path)
+                # Apply penalty to intermediates
+                for node in path[1:-1]:
+                    penalty_weights[node] += 3.0 # Heavy penalty encourages other routes
+            else:
+                break
+                
+        return paths if paths else [self.find_shortest_path(start, end) or []]
 
 class Drone:
     def __init__(self, drone_id: int, current_zone: Optional[str] = None) -> None:
