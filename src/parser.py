@@ -142,7 +142,15 @@ class MapParser:
         for name, coords, meta in all_hubs_raw:
             zone_type = meta.get("zone", "normal")
             color = meta.get("color", "none")
-            max_drones = int(meta.get("max_drones", 1))
+            
+            # Start and End hubs should have infinite capacity by default unless overridden? 
+            # Actually, standard is they can hold all drones at once.
+            if self.start_hub and name == self.start_hub[0]:
+                max_drones = int(meta.get("max_drones", self.nb_drones))
+            elif self.end_hub and name == self.end_hub[0]:
+                max_drones = int(meta.get("max_drones", self.nb_drones))
+            else:
+                max_drones = int(meta.get("max_drones", 1))
             
             zone_obj = Zone(name=name, x=coords[0], y=coords[1], zone_type=zone_type, color=color, max_drones=max_drones)
             graph.add_zone(zone_obj)
@@ -158,6 +166,6 @@ class MapParser:
             drones.append(drone_obj)
             # Ajouter les drones direct dans la zone de départ si elle existe
             if start_zone_name and start_zone_name in graph.zones:
-                graph.zones[start_zone_name].drones.append(drone_obj.id)
+                graph.zones[start_zone_name].drones.append(str(drone_obj.id))
                 
         return graph, drones
