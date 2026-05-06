@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Dict, Tuple, List
-from models import Graph, Zone, Connection, Drone
+from models.core import Graph, Zone, Connection, Drone
 
 class MapParser:
     def __init__(self, path: str) -> None:
