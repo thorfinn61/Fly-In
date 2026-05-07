@@ -194,3 +194,4 @@ class Drone:
         self.planned_path: List[str] = []
         self.status: str = "waiting"  # "waiting", "in_flight", "arrived", etc.
         self.moves: int = 0
+        self.wait_turns: int = 0

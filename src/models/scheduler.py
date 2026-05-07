@@ -29,7 +29,12 @@ class Scheduler:
             link_usage[key] = {'used': 0, 'max': conn.max_link_capacity}
 
         move_intents = []
+        # On garde trace des drones qui attendent pour qu'ils ne soient pas traités dans Phase 2
         for drone in self.drones:
+            if getattr(drone, 'wait_turns', 0) > 0:
+                drone.wait_turns -= 1
+                continue
+            
             if drone.planned_path and len(drone.planned_path) > 1:
                 move_intents.append({
                     'drone': drone,
@@ -113,6 +118,11 @@ class Scheduler:
             drone.planned_path.pop(0)
             drone.moves += 1
             drone.status = "in_flight"
+            
+            if self.graph.zones[target_zone].zone_type == "restricted":
+                drone.wait_turns = 1
+            else:
+                drone.wait_turns = 0
 
             if len(drone.planned_path) == 1:
                 drone.status = "arrived"
