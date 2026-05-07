@@ -22,9 +22,9 @@ clean:
 	find . -name "*.pyo" -delete
 
 lint:
-	flake8 src tests
-	mypy src
+	flake8 src
+	$(PYTHON) -m mypy src
 
 lint-strict:
-	flake8 src tests
-	mypy src --strict
+	flake8 src
+	$(PYTHON) -m mypy src --strict

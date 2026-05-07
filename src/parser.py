@@ -1,16 +1,18 @@
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 from models.core import Graph, Zone, Connection, Drone
+
+HubData = Tuple[str, Tuple[int, int], Dict[str, str]]
 
 
 class MapParser:
     def __init__(self, path: str) -> None:
         self.path = Path(path)
         self.nb_drones = 0
-        self.start_hub = None
-        self.end_hub = None
-        self.hubs = []
-        self.connections = []
+        self.start_hub: Optional[HubData] = None
+        self.end_hub: Optional[HubData] = None
+        self.hubs: List[HubData] = []
+        self.connections: List[Tuple[str, str, int]] = []
 
     def parse(self) -> None:
         if not self.path.exists():
@@ -123,7 +125,9 @@ class MapParser:
             try:
                 data = line.split("connection:")
                 if "-" not in data[1]:
-                    raise ValueError(f"Ligne {line_num}: Séparateur '-' manquant.")
+                    raise ValueError(
+                        f"Ligne {line_num}: Separateur '-' manquant."
+                    )
                 splitted = data[1].split("-")
                 zone1 = splitted[0].strip()
                 zone2 = splitted[1].split("[")[0].strip()
@@ -172,9 +176,8 @@ class MapParser:
             zone_type = meta.get("zone", "normal")
             color = meta.get("color", "none")
 
-            #
-            # Start and End hubs should have infinite capacity by default unless overridden?
-            # Actually, standard is they can hold all drones at once.
+            # Start and End hubs should have infinite capacity by default
+            # unless overridden. They can hold all drones at once.
             if self.start_hub and name == self.start_hub[0]:
                 max_drones = int(meta.get("max_drones", self.nb_drones))
             elif self.end_hub and name == self.end_hub[0]:
@@ -196,12 +199,14 @@ class MapParser:
             conn_obj = Connection(zone1=z1, zone2=z2, max_link_capacity=capacity)
             graph.add_connection(conn_obj)
 
-        start_zone_name = self.start_hub[0] if self.start_hub else None
+        start_zone_name: Optional[str] = (
+            self.start_hub[0] if self.start_hub else None
+        )
 
         for i in range(self.nb_drones):
             drone_obj = Drone(drone_id=i + 1, current_zone=start_zone_name)
             drones.append(drone_obj)
-            # Ajouter les drones direct dans la zone de départ si elle existe
+            # Ajouter les drones direct dans la zone de depart si elle existe
             if start_zone_name and start_zone_name in graph.zones:
                 graph.zones[start_zone_name].drones.append(str(drone_obj.id))
 

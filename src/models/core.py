@@ -41,7 +41,9 @@ class Graph:
         self.zones: Dict[str, Zone] = {}
         self.connections: List[Connection] = []
         self.adjacency: Dict[str, List[str]] = {}
-        self._path_cache: Dict[Tuple[str, str], Optional[List[str]]] = {}
+        self._path_cache: Dict[
+            Tuple[str, str, Tuple[str, ...]], Optional[List[str]]
+        ] = {}
 
     def add_zone(self, zone: Zone) -> None:
         self.zones[zone.name] = zone
@@ -111,8 +113,8 @@ class Graph:
             return None
 
         # Reconstruire le chemin
-        path = []
-        curr = end
+        path: List[str] = []
+        curr: Optional[str] = end
         while curr is not None:
             path.append(curr)
             curr = previous_nodes[curr]
@@ -126,15 +128,21 @@ class Graph:
     def find_disjoint_paths(
         self, start: str, end: str, max_paths: int = 5
     ) -> List[List[str]]:
-        paths = []
-        penalty_weights = {node: 0.0 for node in self.zones}
+        paths: List[List[str]] = []
+        penalty_weights: Dict[str, float] = {
+            node: 0.0 for node in self.zones
+        }
 
         for _ in range(max_paths):
             # Custom Dijkstra with soft penalties instead of strict avoidance
-            distances = {node: float("inf") for node in self.zones}
+            distances: Dict[str, float] = {
+                node: float("inf") for node in self.zones
+            }
             distances[start] = 0.0
-            previous_nodes = {node: None for node in self.zones}
-            pq = [(0.0, start)]
+            previous_nodes: Dict[str, Optional[str]] = {
+                node: None for node in self.zones
+            }
+            pq: List[Tuple[float, str]] = [(0.0, start)]
 
             while pq:
                 current_distance, current_zone = heapq.heappop(pq)
@@ -167,8 +175,8 @@ class Graph:
                 break
 
             # Rebuild path
-            path = []
-            curr = end
+            path: List[str] = []
+            curr: Optional[str] = end
             while curr is not None:
                 path.append(curr)
                 curr = previous_nodes[curr]
@@ -188,10 +196,13 @@ class Graph:
 
 
 class Drone:
-    def __init__(self, drone_id: int, current_zone: Optional[str] = None) -> None:
+    def __init__(
+        self, drone_id: int, current_zone: Optional[str] = None
+    ) -> None:
         self.id: int = drone_id
-        self.current_zone: Optional[str] = current_zone
+        self.current_zone: str = current_zone if current_zone is not None else ""
         self.planned_path: List[str] = []
         self.status: str = "waiting"  # "waiting", "in_flight", "arrived", etc.
         self.moves: int = 0
         self.wait_turns: int = 0
+        self.pending_connection: str = ""
