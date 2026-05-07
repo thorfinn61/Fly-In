@@ -1,1 +1,3 @@
 __pycache__/
+.claude/
+.mypy_cache/
