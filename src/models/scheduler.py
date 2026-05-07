@@ -111,6 +111,7 @@ class Scheduler:
             
             drone.current_zone = target_zone
             drone.planned_path.pop(0)
+            drone.moves += 1
             drone.status = "in_flight"
 
             if len(drone.planned_path) == 1:

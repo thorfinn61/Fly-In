@@ -1,35 +1,34 @@
 import tkinter as tk
 import math
-from .core import Graph
 
 class Renderer:
     def __init__(self, simulation) -> None:
         self.sim = simulation
         
         self.root = tk.Tk()
-        self.root.title("Fly-In Simulator Pro Edition")
+        self.root.title("Fly-In Simulator Pro Edition 2.0")
         
         # Dimensions and Resizing
-        window_width = 1250
-        window_height = 850
+        window_width = 1400
+        window_height = 900
         self.root.geometry(f'{window_width}x{window_height}')
-        self.root.minsize(900, 650)
+        self.root.minsize(1024, 768)
         self.root.configure(bg="#0B1120") # Deep midnight blue
         
         # Minimalist Elegant Theme
         self.theme = {
-            "bg": "#0B1120",
-            "header_bg": "#0F172A",
-            "card_bg": "#1E293B",
-            "border": "#334155",
-            "text": "#F8FAFC",
-            "subtext": "#94A3B8",
-            "line": "#334155",
-            "drone_waiting": "#FBBF24", 
-            "drone_flight": "#38BDF8", 
-            "drone_arrived": "#10B981",
-            "btn_bg": "#334155",
-            "btn_hover": "#475569"
+            "bg": "#0f111a",
+            "header_bg": "#141724",
+            "card_bg": "#1f2233",
+            "border": "#2b2f42",
+            "text": "#e0e2ed",
+            "subtext": "#878a9c",
+            "line": "#2b2f42",
+            "drone_waiting": "#ffb86c", 
+            "drone_flight": "#8be9fd", 
+            "drone_arrived": "#50fa7b",
+            "btn_bg": "#2b2f42",
+            "btn_hover": "#44475a"
         }
         
         # --- TOP DASHBOARD PANEL ---
@@ -42,35 +41,33 @@ class Renderer:
         
         # -> LEFT: Logo & Branding
         logo_frame = tk.Frame(self.panel, bg=self.theme["header_bg"])
-        logo_frame.pack(side=tk.LEFT, padx=30, fill=tk.Y, pady=20)
-        tk.Label(logo_frame, text="FLY-IN", font=("Segoe UI", 24, "bold"), bg=self.theme["header_bg"], fg=self.theme["text"]).pack(side=tk.LEFT)
-        tk.Label(logo_frame, text=" LOGISTICS", font=("Segoe UI", 24, "bold"), bg=self.theme["header_bg"], fg=self.theme["drone_flight"]).pack(side=tk.LEFT)
+        logo_frame.pack(side=tk.LEFT, padx=30, fill=tk.Y, pady=25)
+        tk.Label(logo_frame, text="FLY IN", font=("Segoe UI", 16, "bold"), bg=self.theme["header_bg"], fg=self.theme["text"]).pack(side=tk.LEFT)
+        
+        # -> RIGHT: Controls
+        ctrl_frame = tk.Frame(self.panel, bg=self.theme["header_bg"])
+        ctrl_frame.pack(side=tk.RIGHT, padx=30, fill=tk.Y, pady=15)
         
         # -> CENTER: Telemetry / Stats Cards
-        stats_frame = tk.Frame(self.panel, bg=self.theme["card_bg"], padx=20, pady=5)
-        # Hack to vertically center it in the panel
-        stats_wrapper = tk.Frame(self.panel, bg=self.theme["header_bg"])
-        stats_wrapper.pack(side=tk.LEFT, expand=True)
-        stats_frame.pack(in_=stats_wrapper, pady=15)
+        stats_frame = tk.Frame(self.panel, bg=self.theme["card_bg"], padx=5, pady=2)
+        stats_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
         # Separator config for stats
         def add_stat(parent, title, color="white"):
             var = tk.StringVar(value="0")
             col = tk.Frame(parent, bg=self.theme["card_bg"])
-            col.pack(side=tk.LEFT, padx=15)
-            tk.Label(col, text=title.upper(), font=("Segoe UI", 9, "bold"), bg=self.theme["card_bg"], fg=self.theme["subtext"]).pack()
-            tk.Label(col, textvariable=var, font=("Segoe UI", 16, "bold"), bg=self.theme["card_bg"], fg=color).pack()
+            col.pack(side=tk.LEFT, padx=5)
+            tk.Label(col, text=title.upper(), font=("Segoe UI", 7, "bold"), bg=self.theme["card_bg"], fg=self.theme["subtext"]).pack()
+            tk.Label(col, textvariable=var, font=("Segoe UI", 13, "bold"), bg=self.theme["card_bg"], fg=color).pack()
             return var
             
         self.var_turn = add_stat(stats_frame, "Turn", self.theme["text"])
         tk.Frame(stats_frame, width=1, bg=self.theme["border"]).pack(side=tk.LEFT, fill=tk.Y, pady=5)
+        self.var_moves = add_stat(stats_frame, "Moves", "#facc15")  # Make it yellow so it stands out
+        tk.Frame(stats_frame, width=1, bg=self.theme["border"]).pack(side=tk.LEFT, fill=tk.Y, pady=5)
         self.var_wait = add_stat(stats_frame, "Waiting", self.theme["drone_waiting"])
         self.var_flight = add_stat(stats_frame, "In Flight", self.theme["drone_flight"])
         self.var_arriv = add_stat(stats_frame, "Arrived", self.theme["drone_arrived"])
-
-        # -> RIGHT: Controls
-        ctrl_frame = tk.Frame(self.panel, bg=self.theme["header_bg"])
-        ctrl_frame.pack(side=tk.RIGHT, padx=30, fill=tk.Y, pady=15)
         
         # Elegant Buttons
         btn_style = {"font": ("Segoe UI", 10, "bold"), "fg": self.theme["text"], "bg": self.theme["btn_bg"], 
@@ -102,8 +99,8 @@ class Renderer:
         self.canvas_width = window_width
         self.canvas_height = window_height - 80
         self.padding = 60
-        self.node_radius = 28
-        self.drone_radius = 5
+        self.node_radius = 35
+        self.drone_radius = 8
         self.drone_shapes = {}
         self.prev_positions = {}
         
@@ -216,8 +213,10 @@ class Renderer:
         c_arr = sum(1 for d in self.sim.drones if d.status == "arrived")
         c_fly = sum(1 for d in self.sim.drones if d.status == "in_flight")
         c_wat = sum(1 for d in self.sim.drones if d.status == "waiting")
+        tot_moves = sum(d.moves for d in self.sim.drones)
         
         self.var_turn.set(f"{turn}")
+        self.var_moves.set(f"{tot_moves}")
         self.var_arriv.set(f"{c_arr} / {c_tot}")
         self.var_flight.set(f"{c_fly}")
         self.var_wait.set(f"{c_wat}")
@@ -258,15 +257,13 @@ class Renderer:
                 if d.id not in self.drone_shapes:
                     g = self.canvas.create_oval(0,0,0,0, fill="", outline=col, width=1.5)
                     c = self.canvas.create_oval(0,0,0,0, fill=col, outline=self.theme["bg"], width=1)
-                    txt = self.canvas.create_text(0,0, text=str(d.id), fill="#0B1120", font=("Segoe UI", 6, "bold"))
-                    self.drone_shapes[d.id] = (c, g, txt)
+                    self.drone_shapes[d.id] = (c, g)
                 
-                c, g, txt = self.drone_shapes[d.id]
+                c, g = self.drone_shapes[d.id]
                 self.canvas.coords(g, cx - self.drone_radius - 2, cy - self.drone_radius - 2, cx + self.drone_radius + 2, cy + self.drone_radius + 2)
                 self.canvas.itemconfig(g, outline=col)
                 self.canvas.coords(c, cx - self.drone_radius, cy - self.drone_radius, cx + self.drone_radius, cy + self.drone_radius)
                 self.canvas.itemconfig(c, fill=col)
-                self.canvas.coords(txt, cx, cy)
 
             self.root.update()
             if not initial:

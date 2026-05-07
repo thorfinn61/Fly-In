@@ -1,0 +1,8 @@
+D1-gate_hell1
+D1-maze_trap_a1 D2-gate_hell1
+D1-maze_trap_a2 D2-gate_hell2 D3-gate_hell1
+D1-micro_gate1 D2-maze_trap_b1 D3-gate_hell2 D4-gate_hell1
+D1-micro_gate1-overflow_hell1 D2-maze_trap_b2 D3-gate_hell3 D4-maze_trap_a1 D5-gate_hell1
+D1-overflow_hell1 D2-micro_gate1 D3-gate_hell3-maze_loop1 D4-maze_trap_a2 D5-gate_hell2 D6-gate_hell1
+D1-overflow_hell1-conv_restricted1 D2-micro_gate1-overflow_hell4 D3-maze_loop1 D4-micro_gate1 D5-maze_trap_b1 D6-gate_hell2 D7-gate_hell1
+D1-conv_restricted1 D2-overflow_hell4 D3-maze_loop1-maze_loop2 D4-micro_gate1-overflow_hell1 D5-maze_trap_b2 D6-gate_hell3 D7-maze_trap_a1 D8-gate_hell1
