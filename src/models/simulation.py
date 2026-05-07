@@ -17,7 +17,7 @@ class Simulation:
             os.remove(self.log_file)
             
         with open(self.log_file, "w") as f:
-            f.write(f"--- DÉBUT DE LA SIMULATION : {os.path.basename(self.map_path)} ---\n")
+            pass # Plus de header
         
         # Charger les données avant de lancer le rendu
         parser = MapParser(self.map_path)
@@ -55,10 +55,10 @@ class Simulation:
         
         # Enregistrement des mouvements dans le log
         if moves:
+            # Trie les mouvements pour avoir un ordre consistant, ex: D1, D2, etc. (facultatif mais plus propre)
+            moves.sort(key=lambda x: int(x.split('-')[0][1:]))
             with open(self.log_file, "a") as f:
-                f.write(f"\n[Tour {self.turn}]\n")
-                for move in moves:
-                    f.write(f"{move}\n")
+                f.write(" ".join(moves) + "\n")
                     
         self.renderer.render(self.turn)
         self.turn += 1

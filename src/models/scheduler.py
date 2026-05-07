@@ -20,7 +20,7 @@ class Scheduler:
                 drone.status = "waiting"
                 path_idx = (path_idx + 1) % len(paths)
 
-    def resolve_conflicts(self) -> None:
+    def resolve_conflicts(self) -> List[str]:
         # 1. Initialiser l'usage des connexions pour ce tour
         link_usage = {}
         for conn in self.graph.connections:
@@ -29,10 +29,18 @@ class Scheduler:
             link_usage[key] = {'used': 0, 'max': conn.max_link_capacity}
 
         move_intents = []
+        formatted_moves = []
         # On garde trace des drones qui attendent pour qu'ils ne soient pas traités dans Phase 2
         for drone in self.drones:
             if getattr(drone, 'wait_turns', 0) > 0:
                 drone.wait_turns -= 1
+                if drone.wait_turns == 0:
+                    formatted_moves.append(f"D{drone.id}-{drone.current_zone}")
+                    if len(drone.planned_path) == 1:
+                        drone.status = "arrived"
+                else:
+                    con = getattr(drone, 'pending_connection', f"conn-{drone.current_zone}")
+                    formatted_moves.append(f"D{drone.id}-{con}")
                 continue
             
             if drone.planned_path and len(drone.planned_path) > 1:
@@ -112,6 +120,7 @@ class Scheduler:
         for move in approved_moves:
             drone = move['drone']
             target_zone = move['to']
+            current_zone = move['from']
             self.graph.zones[target_zone].drones.append(str(drone.id))
             
             drone.current_zone = target_zone
@@ -121,9 +130,12 @@ class Scheduler:
             
             if self.graph.zones[target_zone].zone_type == "restricted":
                 drone.wait_turns = 1
+                drone.pending_connection = f"{current_zone}-{target_zone}"
+                formatted_moves.append(f"D{drone.id}-{drone.pending_connection}")
             else:
                 drone.wait_turns = 0
-
-            if len(drone.planned_path) == 1:
-                drone.status = "arrived"
-                # Important: On pourrait gérer ici s'ils libèrent la zone d'arrivée une fois posés ou non
+                formatted_moves.append(f"D{drone.id}-{target_zone}")
+                if len(drone.planned_path) == 1:
+                    drone.status = "arrived"
+                
+        return formatted_moves
