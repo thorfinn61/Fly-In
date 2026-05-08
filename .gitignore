@@ -1,3 +1,4 @@
 __pycache__/
 .claude/
 .mypy_cache/
+simulation_moves.log
