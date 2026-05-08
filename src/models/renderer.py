@@ -188,6 +188,7 @@ class Renderer:
         self.drone_radius = 8
         self.drone_shapes: Dict[int, Tuple[int, int]] = {}
         self.prev_positions: Dict[int, str] = {}
+        self.connector_positions: Dict[int, Tuple[float, float]] = {}
         self.min_x: int = 0
         self.min_y: int = 0
         self.scale_x: float = 1.0
@@ -206,6 +207,7 @@ class Renderer:
     def setup_from_graph(self) -> None:
         self.canvas.delete("all")
         self.drone_shapes = {}
+        self.connector_positions = {}
         self.prev_positions = {
             d.id: d.current_zone for d in self.sim.drones
         }
@@ -384,18 +386,32 @@ class Renderer:
                 sox, soy = start_o.get(d.id, (0.0, 0.0))
                 eox, eoy = end_o.get(d.id, (0.0, 0.0))
 
-                # For restricted zones with wait_turns > 0, pause at connector
-                current_zone_obj = self.sim.graph.zones.get(ez)
-                if (hasattr(d, 'wait_turns') and d.wait_turns > 0 and
-                    current_zone_obj and current_zone_obj.zone_type == "restricted"):
-                    # Animate only to midpoint (connector), then pause
-                    t_restricted = min(t * 2, 1.0)
-                    cx = (sx + sox) * (1 - t_restricted) + (ex + eox) * t_restricted
-                    cy = (sy + soy) * (1 - t_restricted) + (ey + eoy) * t_restricted
+                full_sx = sx + sox
+                full_sy = sy + soy
+                full_ex = ex + eox
+                full_ey = ey + eoy
+
+                dest_zone_obj = self.sim.graph.zones.get(ez)
+                is_restricted_dest = (
+                    dest_zone_obj is not None
+                    and dest_zone_obj.zone_type == "restricted"
+                )
+
+                if sz != ez and is_restricted_dest and d.wait_turns > 0:
+                    # Phase 1: entering restricted zone — animate to connector and stop
+                    mid_x = (full_sx + full_ex) / 2
+                    mid_y = (full_sy + full_ey) / 2
+                    self.connector_positions[d.id] = (mid_x, mid_y)
+                    cx = full_sx * (1 - t) + mid_x * t
+                    cy = full_sy * (1 - t) + mid_y * t
+                elif sz == ez and d.id in self.connector_positions:
+                    # Phase 2: depart from connector to restricted zone node
+                    con_x, con_y = self.connector_positions[d.id]
+                    cx = con_x * (1 - t) + full_ex * t
+                    cy = con_y * (1 - t) + full_ey * t
                 else:
-                    # Normal animation
-                    cx = (sx + sox) * (1 - t) + (ex + eox) * t
-                    cy = (sy + soy) * (1 - t) + (ey + eoy) * t
+                    cx = full_sx * (1 - t) + full_ex * t
+                    cy = full_sy * (1 - t) + full_ey * t
 
                 col = self.theme["drone_waiting"]
                 if d.status == "in_flight":
@@ -438,3 +454,8 @@ class Renderer:
 
         for d in self.sim.drones:
             self.prev_positions[d.id] = d.current_zone
+            # Clear connector after phase 2 completes
+            if d.id in self.connector_positions and d.wait_turns == 0:
+                dest_zone_obj = self.sim.graph.zones.get(d.current_zone)
+                if dest_zone_obj and dest_zone_obj.zone_type == "restricted":
+                    del self.connector_positions[d.id]
