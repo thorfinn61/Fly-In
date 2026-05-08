@@ -289,7 +289,10 @@ class Graph:
             else:
                 break
 
-        return paths if paths else [self.find_shortest_path(start, end) or []]
+        if paths:
+            return paths
+        shortest = self.find_shortest_path(start, end)
+        return [shortest] if shortest else []
 
 
 class Drone:

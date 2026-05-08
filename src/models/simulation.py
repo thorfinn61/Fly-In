@@ -71,8 +71,9 @@ class Simulation:
         Arrête la simulation si tous les drones sont arrivés ou si le nombre
         maximum de tours (500) est atteint.
         """
+        terminal = {"arrived", "no_path"}
         if (
-            all(d.status == "arrived" for d in self.drones)
+            all(d.status in terminal for d in self.drones)
             or self.turn >= 500
         ):
             self.is_running = False

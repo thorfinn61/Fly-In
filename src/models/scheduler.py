@@ -34,13 +34,18 @@ class Scheduler:
         """
         # Trouver plusieurs chemins disjoints (par ex. 3) pour eviter les bouchons
         paths = self.graph.find_disjoint_paths(start, end, max_paths=3)
-        if not paths:
-            return
 
         # Assigne les chemins en boucle (Round-Robin) pour paralleliser les drones
         path_idx = 0
         for drone in self.drones:
             if not drone.planned_path and drone.status != "arrived":
+                if not paths:
+                    print(
+                        f"Erreur : aucun chemin disponible pour le drone "
+                        f"D{drone.id} de '{start}' vers '{end}'."
+                    )
+                    drone.status = "no_path"
+                    continue
                 drone.planned_path = paths[path_idx].copy()
                 drone.status = "waiting"
                 path_idx = (path_idx + 1) % len(paths)
@@ -99,15 +104,39 @@ class Scheduler:
         for intent in move_intents:
             drone = intent['drone']
             curr_zone = self.graph.zones[intent['from']]
-            if curr_zone.zone_type == "restricted":
+            if curr_zone.zone_type != "restricted":
+                continue
+
+            target_zone = self.graph.zones[intent['to']]
+            link_key: Tuple[str, ...] = tuple(
+                sorted([intent['from'], intent['to']])
+            )
+
+            # Vérifier la capacité du lien
+            if (
+                link_key in link_usage
+                and link_usage[link_key]['used'] >= link_usage[link_key]['max']
+            ):
+                drone.status = "waiting"
+                continue
+
+            # Vérifier la capacité de la zone cible (même logique que Phase 2)
+            current_occupants = set(target_zone.drones)
+            for am in approved_moves:
+                if am['from'] == target_zone.name:
+                    current_occupants.discard(str(am['drone'].id))
+            incoming = sum(
+                1 for am in approved_moves if am['to'] == target_zone.name
+            )
+            projected_occupancy = len(current_occupants) + incoming
+
+            if projected_occupancy < target_zone.max_drones:
                 approved_moves.append(intent)
                 moved_drones.add(drone.id)
-
-                link_key: Tuple[str, ...] = tuple(
-                    sorted([intent['from'], intent['to']])
-                )
                 if link_key in link_usage:
                     link_usage[link_key]['used'] += 1
+            else:
+                drone.status = "waiting"
 
         # Phase 2: Autorisation iterative avec "Liberation meme tour"
         # On passe en boucle jusqu'a ce qu'il n'y ait plus de nouveaux

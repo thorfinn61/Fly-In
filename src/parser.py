@@ -72,6 +72,10 @@ class MapParser:
             ValueError: Si la valeur est absente ou n'est pas un entier positif.
         """
         if line.startswith("nb_drones"):
+            if self.nb_drones > 0:
+                raise ValueError(
+                    f"Ligne {line_num}: 'nb_drones' défini plusieurs fois."
+                )
             try:
                 nb = line.split(":")
                 nb1 = nb[1].strip()
