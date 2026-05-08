@@ -384,8 +384,18 @@ class Renderer:
                 sox, soy = start_o.get(d.id, (0.0, 0.0))
                 eox, eoy = end_o.get(d.id, (0.0, 0.0))
 
-                cx = (sx + sox) * (1 - t) + (ex + eox) * t
-                cy = (sy + soy) * (1 - t) + (ey + eoy) * t
+                # For restricted zones with wait_turns > 0, pause at connector
+                current_zone_obj = self.sim.graph.zones.get(ez)
+                if (hasattr(d, 'wait_turns') and d.wait_turns > 0 and
+                    current_zone_obj and current_zone_obj.zone_type == "restricted"):
+                    # Animate only to midpoint (connector), then pause
+                    t_restricted = min(t * 2, 1.0)
+                    cx = (sx + sox) * (1 - t_restricted) + (ex + eox) * t_restricted
+                    cy = (sy + soy) * (1 - t_restricted) + (ey + eoy) * t_restricted
+                else:
+                    # Normal animation
+                    cx = (sx + sox) * (1 - t) + (ex + eox) * t
+                    cy = (sy + soy) * (1 - t) + (ey + eoy) * t
 
                 col = self.theme["drone_waiting"]
                 if d.status == "in_flight":
