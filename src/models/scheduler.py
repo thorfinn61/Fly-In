@@ -1,13 +1,37 @@
+"""Planificateur de mouvements des drones avec résolution de conflits."""
+
 from typing import List, Dict, Tuple, Set, Any
 from .core import Graph, Drone
 
 
 class Scheduler:
+    """Assigne les chemins aux drones et résout les conflits de mouvement tour par tour.
+
+    Attributes:
+        graph: Le graphe du réseau de zones.
+        drones: La liste de tous les drones de la simulation.
+    """
+
     def __init__(self, graph: Graph, drones: List[Drone]) -> None:
+        """Initialise le planificateur avec le graphe et la liste de drones.
+
+        Args:
+            graph: Graphe du réseau de zones.
+            drones: Liste des drones à planifier.
+        """
         self.graph: Graph = graph
         self.drones: List[Drone] = drones
 
     def assign_paths(self, start: str, end: str) -> None:
+        """Assigne un chemin à chaque drone sans chemin planifié.
+
+        Calcule plusieurs chemins disjoints via le graphe, puis les distribue
+        en round-robin pour paralléliser les déplacements et éviter les bouchons.
+
+        Args:
+            start: Nom de la zone de départ commune à tous les drones.
+            end: Nom de la zone d'arrivée commune à tous les drones.
+        """
         # Trouver plusieurs chemins disjoints (par ex. 3) pour eviter les bouchons
         paths = self.graph.find_disjoint_paths(start, end, max_paths=3)
         if not paths:
@@ -22,6 +46,16 @@ class Scheduler:
                 path_idx = (path_idx + 1) % len(paths)
 
     def resolve_conflicts(self) -> List[str]:
+        """Calcule et applique les mouvements valides pour le tour courant.
+
+        Respecte les capacités de zones et de connexions. Les zones restricted
+        imposent un séjour de 2 tours. Les drones bloqués restent en attente
+        sans provoquer de deadlock.
+
+        Returns:
+            Liste de chaînes au format 'D<id>-<zone>' ou 'D<id>-<conn>'
+            décrivant tous les mouvements du tour.
+        """
         # 1. Initialiser l'usage des connexions pour ce tour
         link_usage: Dict[Tuple[str, ...], Dict[str, int]] = {}
         for conn in self.graph.connections:

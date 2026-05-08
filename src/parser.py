@@ -1,3 +1,5 @@
+"""Parseur du format de fichier de carte Fly-In."""
+
 from pathlib import Path
 from typing import Dict, Tuple, List, Optional
 from models.core import Graph, Zone, Connection, Drone
@@ -6,7 +8,23 @@ HubData = Tuple[str, Tuple[int, int], Dict[str, str]]
 
 
 class MapParser:
+    """Lit et valide un fichier de carte, puis construit les objets du domaine.
+
+    Attributes:
+        path: Chemin vers le fichier de carte.
+        nb_drones: Nombre de drones déclaré dans le fichier.
+        start_hub: Données de la zone de départ unique.
+        end_hub: Données de la zone d'arrivée unique.
+        hubs: Données de toutes les zones régulières.
+        connections: Triplets (zone1, zone2, capacité) des connexions.
+    """
+
     def __init__(self, path: str) -> None:
+        """Initialise le parseur pour le chemin de fichier donné.
+
+        Args:
+            path: Chemin système vers le fichier de carte.
+        """
         self.path = Path(path)
         self.nb_drones = 0
         self.start_hub: Optional[HubData] = None
@@ -15,6 +33,13 @@ class MapParser:
         self.connections: List[Tuple[str, str, int]] = []
 
     def parse(self) -> None:
+        """Lit le fichier ligne par ligne et remplit les structures internes.
+
+        Raises:
+            FileNotFoundError: Si le fichier de carte n'existe pas.
+            ValueError: Pour toute erreur de syntaxe ou sémantique,
+                avec le numéro de ligne et la cause.
+        """
         if not self.path.exists():
             raise FileNotFoundError(f"Le fichier '{self.path}' n'existe pas.")
         with open(self.path, "r") as f:
@@ -37,6 +62,15 @@ class MapParser:
                     )
 
     def parse_nb_drones(self, line: str, line_num: int) -> None:
+        """Analyse une ligne nb_drones et enregistre le nombre de drones.
+
+        Args:
+            line: Ligne brute du fichier.
+            line_num: Numéro de ligne utilisé dans les messages d'erreur.
+
+        Raises:
+            ValueError: Si la valeur est absente ou n'est pas un entier positif.
+        """
         if line.startswith("nb_drones"):
             try:
                 nb = line.split(":")
@@ -52,6 +86,16 @@ class MapParser:
                 )
 
     def parse_hubs(self, line: str, line_num: int) -> None:
+        """Analyse une ligne start_hub ou end_hub et enregistre ses données.
+
+        Args:
+            line: Ligne brute du fichier.
+            line_num: Numéro de ligne utilisé dans les messages d'erreur.
+
+        Raises:
+            ValueError: Si la zone est définie plusieurs fois ou si la
+                syntaxe est invalide.
+        """
         if line.startswith("start_hub"):
             if self.start_hub is not None:
                 raise ValueError(
@@ -87,6 +131,15 @@ class MapParser:
                 raise ValueError(f"Ligne {line_num}: Format de 'end_hub' invalide.")
 
     def parse_hub(self, line: str, line_num: int) -> None:
+        """Analyse une ligne hub régulière et l'ajoute à la liste des zones.
+
+        Args:
+            line: Ligne brute du fichier.
+            line_num: Numéro de ligne utilisé dans les messages d'erreur.
+
+        Raises:
+            ValueError: Si la syntaxe de la ligne hub est invalide.
+        """
         if line.startswith("hub:"):
             try:
                 data = line.split("hub:")[1]
@@ -102,6 +155,18 @@ class MapParser:
                 raise ValueError(f"Ligne {line_num}: Format du 'hub' invalide.")
 
     def parse_metadata(self, meta: str, line_num: int) -> Dict[str, str]:
+        """Analyse un bloc de métadonnées (contenu entre crochets) en dict clé-valeur.
+
+        Args:
+            meta: Chaîne brute de métadonnées, ex. 'zone=restricted color=red'.
+            line_num: Numéro de ligne utilisé dans les messages d'erreur.
+
+        Returns:
+            Dictionnaire des paires clé-valeur extraites.
+
+        Raises:
+            ValueError: Si un token est mal formé ou si le type de zone est inconnu.
+        """
         result = {}
         VALID_ZONES = ["normal", "restricted", "priority", "blocked"]
         data = meta.split()
@@ -121,6 +186,16 @@ class MapParser:
         return result
 
     def parse_connection(self, line: str, line_num: int) -> None:
+        """Analyse une ligne connection et l'ajoute à la liste des connexions.
+
+        Args:
+            line: Ligne brute du fichier.
+            line_num: Numéro de ligne utilisé dans les messages d'erreur.
+
+        Raises:
+            ValueError: Si la syntaxe est invalide, si une zone référencée est
+                inconnue ou si la connexion est définie en double.
+        """
         if line.startswith("connection:"):
             try:
                 data = line.split("connection:")
@@ -163,6 +238,11 @@ class MapParser:
             self.connections.append((zone1, zone2, capacity))
 
     def build_models(self) -> Tuple[Graph, List[Drone]]:
+        """Construit les objets Graph et Drone à partir des données parsées.
+
+        Returns:
+            Tuple (graph, drones) prêts à être utilisés par la simulation.
+        """
         graph = Graph()
         drones = []
 

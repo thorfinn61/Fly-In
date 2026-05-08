@@ -1,9 +1,12 @@
+"""Point d'entrée de la simulation de drones Fly-In."""
+
 import sys
 import os
 from models.simulation import Simulation
 
 
 def main() -> None:
+    """Lance la simulation à partir d'un fichier de carte passé en argument."""
     if len(sys.argv) < 2:
         print("Erreur : Aucun fichier de carte fourni.")
         print("Usage: python3 src/main.py <path_to_map>")

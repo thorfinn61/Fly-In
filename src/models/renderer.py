@@ -1,10 +1,32 @@
+"""Interface graphique Tkinter pour la simulation de drones Fly-In."""
+
 import tkinter as tk
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
 
 class Renderer:
+    """Fenêtre Tkinter animée affichant le réseau et les déplacements des drones.
+
+    Attributes:
+        sim: Référence à l'objet Simulation principal.
+        root: Fenêtre racine Tkinter.
+        theme: Dictionnaire de couleurs du thème graphique.
+        canvas: Zone de dessin principale.
+        speed_slider: Curseur de contrôle de la vitesse d'animation.
+        btn_play: Bouton lecture/pause.
+        btn_restart: Bouton de réinitialisation.
+        drone_shapes: Association id_drone → (cercle_principal, cercle_halo).
+        prev_positions: Positions des drones au tour précédent pour l'animation.
+        connector_positions: Positions intermédiaires pour les zones restricted.
+    """
+
     def __init__(self, simulation: Any) -> None:
+        """Construit la fenêtre Tkinter, le tableau de bord et le canvas de simulation.
+
+        Args:
+            simulation: Instance de Simulation fournissant le graphe et les drones.
+        """
         self.sim = simulation
 
         self.root = tk.Tk()
@@ -198,6 +220,11 @@ class Renderer:
         self.canvas.bind("<Configure>", self.on_resize)
 
     def on_resize(self, event: "tk.Event[tk.Canvas]") -> None:
+        """Gère le redimensionnement de la fenêtre et replanifie un redessin différé.
+
+        Args:
+            event: Événement Configure de Tkinter contenant la nouvelle taille.
+        """
         self.canvas_width = event.width
         self.canvas_height = event.height
         if self.resize_timer:
@@ -205,6 +232,11 @@ class Renderer:
         self.resize_timer = self.root.after(100, self.setup_from_graph)
 
     def setup_from_graph(self) -> None:
+        """Redessine entièrement le canvas à partir de l'état courant du graphe.
+
+        Calcule la mise à l'échelle des coordonnées, trace les connexions,
+        les zones avec leurs couleurs et capacités, puis lance le rendu initial.
+        """
         self.canvas.delete("all")
         self.drone_shapes = {}
         self.connector_positions = {}
@@ -289,6 +321,15 @@ class Renderer:
                 self.cmd_toggle()
 
     def get_coords(self, x: int, y: int) -> Tuple[float, float]:
+        """Convertit des coordonnées de carte en pixels sur le canvas.
+
+        Args:
+            x: Coordonnée X de la carte.
+            y: Coordonnée Y de la carte.
+
+        Returns:
+            Tuple (px, py) en pixels pour le canvas Tkinter.
+        """
         return (
             self.padding + (x - self.min_x) * self.scale_x,
             self.padding + (y - self.min_y) * self.scale_y,
@@ -297,6 +338,14 @@ class Renderer:
     def get_offsets(
         self, drones_list: List[Any]
     ) -> Dict[int, Tuple[float, float]]:
+        """Calcule les décalages circulaires pour afficher plusieurs drones par zone.
+
+        Args:
+            drones_list: Liste des drones présents dans la même zone.
+
+        Returns:
+            Dictionnaire id_drone → (offset_x, offset_y) en pixels.
+        """
         opts: Dict[int, Tuple[float, float]] = {}
         n = len(drones_list)
         if n == 0:
@@ -314,6 +363,7 @@ class Renderer:
         return opts
 
     def cmd_toggle(self) -> None:
+        """Bascule entre l'état lecture et pause, et met à jour le bouton PLAY/PAUSE."""
         self.sim.is_running = not self.sim.is_running
         if self.sim.is_running:
             self.btn_play.config(
@@ -330,10 +380,12 @@ class Renderer:
             )
 
     def cmd_restart(self) -> None:
+        """Arrête la simulation et la réinitialise à son état initial."""
         self.sim.is_running = False
         self.sim.reset()
 
     def pulse(self) -> None:
+        """Boucle d'animation : exécute un tour de simulation puis se replanifie."""
         if not self.sim.is_running:
             return
         self.sim.step()
@@ -341,6 +393,16 @@ class Renderer:
             self.root.after(10, self.pulse)
 
     def render(self, turn: int, initial: bool = False) -> None:
+        """Met à jour les statistiques et anime les drones sur le canvas.
+
+        Interpole les positions des drones entre leur zone de départ et
+        d'arrivée. Gère le cas spécial des zones restricted (animation en
+        deux phases avec arrêt à mi-chemin).
+
+        Args:
+            turn: Numéro du tour courant affiché dans le tableau de bord.
+            initial: Si True, affiche sans animation (rendu instantané).
+        """
         c_tot = len(self.sim.drones)
         c_arr = sum(1 for d in self.sim.drones if d.status == "arrived")
         c_fly = sum(1 for d in self.sim.drones if d.status == "in_flight")

@@ -1,8 +1,22 @@
+"""Modèles du domaine : Zone, Connection, Graph et Drone."""
+
 from typing import List, Dict, Optional, Tuple
 import heapq
 
 
 class Zone:
+    """Nœud du réseau de drones avec un type, une capacité et une position.
+
+    Attributes:
+        name: Identifiant unique de la zone.
+        x: Coordonnée X sur la carte.
+        y: Coordonnée Y sur la carte.
+        zone_type: Type parmi 'normal', 'restricted', 'priority' ou 'blocked'.
+        color: Couleur d'affichage pour le rendu visuel.
+        max_drones: Nombre maximum de drones autorisés simultanément.
+        drones: Liste des identifiants de drones présents dans cette zone.
+    """
+
     def __init__(
         self,
         name: str,
@@ -13,6 +27,17 @@ class Zone:
         max_drones: int = 1,
         drones: Optional[List[str]] = None,
     ) -> None:
+        """Initialise une Zone.
+
+        Args:
+            name: Identifiant unique de la zone.
+            x: Coordonnée X.
+            y: Coordonnée Y.
+            zone_type: Type de comportement de la zone.
+            color: Couleur de rendu (défaut 'none').
+            max_drones: Limite de capacité (défaut 1).
+            drones: Occupants pré-existants (défaut liste vide).
+        """
         self.name: str = name
         self.x: int = x
         self.y: int = y
@@ -23,6 +48,15 @@ class Zone:
 
 
 class Connection:
+    """Représente un arc bidirectionnel entre deux zones avec une limite de capacité.
+
+    Attributes:
+        zone1: Nom de la première zone.
+        zone2: Nom de la deuxième zone.
+        max_link_capacity: Nombre maximum de drones pouvant traverser simultanément.
+        drones: Identifiants des drones en transit sur cette connexion.
+    """
+
     def __init__(
         self,
         zone1: str,
@@ -30,6 +64,14 @@ class Connection:
         max_link_capacity: int = 1,
         drones: Optional[List[str]] = None,
     ) -> None:
+        """Initialise une Connection.
+
+        Args:
+            zone1: Nom de la première zone.
+            zone2: Nom de la deuxième zone.
+            max_link_capacity: Limite de traversée simultanée (défaut 1).
+            drones: Drones actuellement sur ce lien (défaut liste vide).
+        """
         self.zone1: str = zone1
         self.zone2: str = zone2
         self.max_link_capacity: int = max_link_capacity
@@ -37,7 +79,16 @@ class Connection:
 
 
 class Graph:
+    """Graphe de zones et connexions avec recherche de chemin par Dijkstra.
+
+    Attributes:
+        zones: Association nom de zone → objet Zone.
+        connections: Liste de tous les objets Connection du réseau.
+        adjacency: Liste d'adjacence indexée par nom de zone.
+    """
+
     def __init__(self) -> None:
+        """Initialise un graphe vide."""
         self.zones: Dict[str, Zone] = {}
         self.connections: List[Connection] = []
         self.adjacency: Dict[str, List[str]] = {}
@@ -46,21 +97,52 @@ class Graph:
         ] = {}
 
     def add_zone(self, zone: Zone) -> None:
+        """Enregistre une zone dans le graphe.
+
+        Args:
+            zone: La Zone à ajouter.
+        """
         self.zones[zone.name] = zone
         self.adjacency[zone.name] = []
 
     def add_connection(self, conn: Connection) -> None:
+        """Enregistre une connexion bidirectionnelle entre deux zones.
+
+        Args:
+            conn: La Connection à ajouter.
+        """
         self.connections.append(conn)
         # bidirectionnel
         self.adjacency[conn.zone1].append(conn.zone2)
         self.adjacency[conn.zone2].append(conn.zone1)
 
     def get_neighbors(self, zone_name: str) -> List[str]:
+        """Retourne la liste des zones adjacentes à la zone donnée.
+
+        Args:
+            zone_name: La zone à interroger.
+
+        Returns:
+            Liste des noms de zones voisines.
+        """
         return self.adjacency.get(zone_name, [])
 
     def find_shortest_path(
         self, start: str, end: str, avoid_zones: Optional[List[str]] = None
     ) -> Optional[List[str]]:
+        """Trouve le chemin le moins coûteux de start à end (algorithme de Dijkstra).
+
+        Coûts de déplacement : normal=1, restricted=2, priority=0.9, blocked=exclu.
+        Les résultats sont mis en cache par (start, end, avoid_zones).
+
+        Args:
+            start: Nom de la zone de départ.
+            end: Nom de la zone de destination.
+            avoid_zones: Zones à exclure de la recherche (ex. zones occupées).
+
+        Returns:
+            Liste ordonnée de noms de zones de start à end, ou None si inaccessible.
+        """
         if start not in self.zones or end not in self.zones:
             return None
 
@@ -128,6 +210,21 @@ class Graph:
     def find_disjoint_paths(
         self, start: str, end: str, max_paths: int = 5
     ) -> List[List[str]]:
+        """Trouve plusieurs chemins à faible chevauchement via Dijkstra avec pénalités.
+
+        Chaque itération ajoute une pénalité aux nœuds des chemins précédents
+        afin d'orienter les chemins suivants vers d'autres routes, améliorant
+        ainsi la répartition de charge des drones.
+
+        Args:
+            start: Nom de la zone de départ.
+            end: Nom de la zone de destination.
+            max_paths: Nombre maximum de chemins à calculer (défaut 5).
+
+        Returns:
+            Liste de chemins (chacun une liste de noms de zones). Retombe sur
+            le chemin le plus court si aucune route différente n'existe.
+        """
         paths: List[List[str]] = []
         penalty_weights: Dict[str, float] = {
             node: 0.0 for node in self.zones
@@ -196,9 +293,28 @@ class Graph:
 
 
 class Drone:
+    """Représente un drone individuel naviguant dans le réseau de zones.
+
+    Attributes:
+        id: Identifiant numérique unique.
+        current_zone: Nom de la zone actuellement occupée par le drone.
+        planned_path: Séquence de noms de zones restant à parcourir.
+        status: État courant — 'waiting', 'in_flight' ou 'arrived'.
+        moves: Nombre total de déplacements réussis.
+        wait_turns: Tours restants avant de quitter une zone restricted.
+        pending_connection: Label de connexion utilisé dans la sortie lors
+            d'un passage en zone restricted sur deux tours (ex. 'zoneA-zoneB').
+    """
+
     def __init__(
         self, drone_id: int, current_zone: Optional[str] = None
     ) -> None:
+        """Initialise un Drone à une zone donnée.
+
+        Args:
+            drone_id: Identifiant entier unique.
+            current_zone: Nom de la zone de départ (défaut chaîne vide).
+        """
         self.id: int = drone_id
         self.current_zone: str = current_zone if current_zone is not None else ""
         self.planned_path: List[str] = []

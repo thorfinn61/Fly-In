@@ -1,3 +1,5 @@
+"""Orchestrateur principal de la simulation de drones."""
+
 import os
 from .scheduler import Scheduler
 from .renderer import Renderer
@@ -5,7 +7,29 @@ from parser import MapParser
 
 
 class Simulation:
+    """Orchestre le parseur, le planificateur et le rendu visuel tour par tour.
+
+    Attributes:
+        map_path: Chemin vers le fichier de carte utilisé.
+        is_running: Indique si la simulation est en cours d'exécution.
+        log_file: Chemin du fichier de log des mouvements.
+        graph: Graphe du réseau de zones.
+        drones: Liste des drones de la simulation.
+        end_hub: Nom de la zone d'arrivée.
+        scheduler: Planificateur de mouvements.
+        turn: Numéro du tour courant.
+        renderer: Interface graphique Tkinter.
+    """
+
     def __init__(self, map_path: str) -> None:
+        """Initialise la simulation à partir d'un fichier de carte.
+
+        Parse le fichier, construit le graphe et les drones, prépare
+        le planificateur et configure la fenêtre graphique.
+
+        Args:
+            map_path: Chemin vers le fichier de carte.
+        """
         self.map_path = map_path
         self.is_running = False
         self.log_file = "simulation_moves.log"
@@ -31,6 +55,7 @@ class Simulation:
         self.renderer.setup_from_graph()
 
     def reset(self) -> None:
+        """Reparse le fichier de carte et réinitialise l'état de la simulation."""
         parser = MapParser(self.map_path)
         parser.parse()
         self.graph, self.drones = parser.build_models()
@@ -41,6 +66,11 @@ class Simulation:
         self.renderer.setup_from_graph()
 
     def step(self) -> None:
+        """Exécute un tour : assigne les chemins, résout les conflits et logue.
+
+        Arrête la simulation si tous les drones sont arrivés ou si le nombre
+        maximum de tours (500) est atteint.
+        """
         if (
             all(d.status == "arrived" for d in self.drones)
             or self.turn >= 500
@@ -63,4 +93,5 @@ class Simulation:
         self.turn += 1
 
     def run(self) -> None:
+        """Lance la boucle principale Tkinter et démarre l'interface graphique."""
         self.renderer.root.mainloop()
