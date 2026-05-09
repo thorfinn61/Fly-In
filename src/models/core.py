@@ -48,12 +48,14 @@ class Zone:
 
 
 class Connection:
-    """Représente un arc bidirectionnel entre deux zones avec une limite de capacité.
+    """Représente un arc bidirectionnel entre deux zones
+    avec une limite de capacité.
 
     Attributes:
         zone1: Nom de la première zone.
         zone2: Nom de la deuxième zone.
-        max_link_capacity: Nombre maximum de drones pouvant traverser simultanément.
+        max_link_capacity: Nombre maximum de drones pouvant
+            traverser simultanément.
         drones: Identifiants des drones en transit sur cette connexion.
     """
 
@@ -130,9 +132,11 @@ class Graph:
     def find_shortest_path(
         self, start: str, end: str, avoid_zones: Optional[List[str]] = None
     ) -> Optional[List[str]]:
-        """Trouve le chemin le moins coûteux de start à end (algorithme de Dijkstra).
+        """Trouve le chemin le moins coûteux de start à end
+        (algorithme de Dijkstra).
 
-        Coûts de déplacement : normal=1, restricted=2, priority=0.9, blocked=exclu.
+        Coûts de déplacement : normal=1, restricted=2,
+        priority=0.9, blocked=exclu.
         Les résultats sont mis en cache par (start, end, avoid_zones).
 
         Args:
@@ -141,7 +145,8 @@ class Graph:
             avoid_zones: Zones à exclure de la recherche (ex. zones occupées).
 
         Returns:
-            Liste ordonnée de noms de zones de start à end, ou None si inaccessible.
+            Liste ordonnée de noms de zones de start à end,
+            ou None si inaccessible.
         """
         if start not in self.zones or end not in self.zones:
             return None
@@ -153,9 +158,13 @@ class Graph:
         if cache_key in self._path_cache:
             return self._path_cache[cache_key]
 
-        distances: Dict[str, float] = {node: float("inf") for node in self.zones}
+        distances: Dict[str, float] = {
+            node: float("inf") for node in self.zones
+        }
         distances[start] = 0.0
-        previous_nodes: Dict[str, Optional[str]] = {node: None for node in self.zones}
+        previous_nodes: Dict[str, Optional[str]] = {
+            node: None for node in self.zones
+        }
 
         # File de priorité: (coût_cumulé, nom_zone)
         pq: List[Tuple[float, str]] = [(0.0, start)]
@@ -172,7 +181,7 @@ class Graph:
             for neighbor in self.adjacency.get(current_zone, []):
                 neighbor_zone = self.zones[neighbor]
 
-                # Exclure les zones blocked ET les zones à éviter temporairement
+                # Exclure blocked ET les zones à éviter
                 if neighbor_zone.zone_type == "blocked" or neighbor in avoid:
                     continue
 
@@ -210,7 +219,8 @@ class Graph:
     def find_disjoint_paths(
         self, start: str, end: str, max_paths: int = 5
     ) -> List[List[str]]:
-        """Trouve plusieurs chemins à faible chevauchement via Dijkstra avec pénalités.
+        """Trouve plusieurs chemins à faible chevauchement
+        via Dijkstra avec pénalités.
 
         Chaque itération ajoute une pénalité aux nœuds des chemins précédents
         afin d'orienter les chemins suivants vers d'autres routes, améliorant
@@ -279,7 +289,7 @@ class Graph:
                 curr = previous_nodes[curr]
             path.reverse()
 
-            # Use path if it's new, else just break to avoid infinite useless loops
+            # Use path if new, else break to avoid infinite loops
             if path not in paths:
                 paths.append(path)
                 # Apply penalty to intermediates
@@ -319,7 +329,9 @@ class Drone:
             current_zone: Nom de la zone de départ (défaut chaîne vide).
         """
         self.id: int = drone_id
-        self.current_zone: str = current_zone if current_zone is not None else ""
+        self.current_zone: str = (
+            current_zone if current_zone is not None else ""
+        )
         self.planned_path: List[str] = []
         self.status: str = "waiting"  # "waiting", "in_flight", "arrived", etc.
         self.moves: int = 0

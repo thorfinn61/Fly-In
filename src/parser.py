@@ -58,7 +58,8 @@ class MapParser:
                     raise
                 except Exception as e:
                     raise ValueError(
-                        f"Ligne {line_num}: Erreur de syntaxe inattendue -> {e}"
+                        f"Ligne {line_num}: "
+                        f"Erreur de syntaxe inattendue -> {e}"
                     )
 
     def parse_nb_drones(self, line: str, line_num: int) -> None:
@@ -69,7 +70,8 @@ class MapParser:
             line_num: Numéro de ligne utilisé dans les messages d'erreur.
 
         Raises:
-            ValueError: Si la valeur est absente ou n'est pas un entier positif.
+            ValueError: Si la valeur est absente ou n'est pas
+                un entier positif.
         """
         if line.startswith("nb_drones"):
             if self.nb_drones > 0:
@@ -82,11 +84,13 @@ class MapParser:
                 self.nb_drones = int(nb1)
             except (IndexError, ValueError):
                 raise ValueError(
-                    f"Ligne {line_num}: 'nb_drones' doit être un entier valide."
+                    f"Ligne {line_num}: "
+                    f"'nb_drones' doit être un entier valide."
                 )
             if self.nb_drones <= 0:
                 raise ValueError(
-                    f"Ligne {line_num}: 'nb_drones' doit être un entier positif."
+                    f"Ligne {line_num}: "
+                    f"'nb_drones' doit être un entier positif."
                 )
 
     def parse_hubs(self, line: str, line_num: int) -> None:
@@ -111,28 +115,36 @@ class MapParser:
                 name = splitted[0]
                 coords = (int(splitted[1]), int(splitted[2]))
                 meta = (
-                    data.split("[")[1].replace("]", "").strip() if "[" in data else ""
+                    data.split("[")[1].replace("]", "").strip()
+                    if "[" in data else ""
                 )
                 metadata = self.parse_metadata(meta, line_num)
                 self.start_hub = (name, coords, metadata)
             except Exception:
-                raise ValueError(f"Ligne {line_num}: Format de 'start_hub' invalide.")
+                raise ValueError(
+                    f"Ligne {line_num}: Format de 'start_hub' invalide."
+                )
 
         elif line.startswith("end_hub"):
             if self.end_hub is not None:
-                raise ValueError(f"Ligne {line_num}: 'end_hub' défini plusieurs fois.")
+                raise ValueError(
+                    f"Ligne {line_num}: 'end_hub' défini plusieurs fois."
+                )
             try:
                 data = line.split("end_hub:")[1]
                 splitted = data.split("[")[0].split()
                 name = splitted[0]
                 coords = (int(splitted[1]), int(splitted[2]))
                 meta = (
-                    data.split("[")[1].replace("]", "").strip() if "[" in data else ""
+                    data.split("[")[1].replace("]", "").strip()
+                    if "[" in data else ""
                 )
                 metadata = self.parse_metadata(meta, line_num)
                 self.end_hub = (name, coords, metadata)
             except Exception:
-                raise ValueError(f"Ligne {line_num}: Format de 'end_hub' invalide.")
+                raise ValueError(
+                    f"Ligne {line_num}: Format de 'end_hub' invalide."
+                )
 
     def parse_hub(self, line: str, line_num: int) -> None:
         """Analyse une ligne hub régulière et l'ajoute à la liste des zones.
@@ -151,15 +163,19 @@ class MapParser:
                 name = splitted[0]
                 coords = (int(splitted[1]), int(splitted[2]))
                 meta = (
-                    data.split("[")[1].replace("]", "").strip() if "[" in data else ""
+                    data.split("[")[1].replace("]", "").strip()
+                    if "[" in data else ""
                 )
                 metadata = self.parse_metadata(meta, line_num)
                 self.hubs.append((name, coords, metadata))
             except Exception:
-                raise ValueError(f"Ligne {line_num}: Format du 'hub' invalide.")
+                raise ValueError(
+                    f"Ligne {line_num}: Format du 'hub' invalide."
+                )
 
     def parse_metadata(self, meta: str, line_num: int) -> Dict[str, str]:
-        """Analyse un bloc de métadonnées (contenu entre crochets) en dict clé-valeur.
+        """Analyse un bloc de métadonnées (contenu entre crochets)
+        en dict clé-valeur.
 
         Args:
             meta: Chaîne brute de métadonnées, ex. 'zone=restricted color=red'.
@@ -169,7 +185,8 @@ class MapParser:
             Dictionnaire des paires clé-valeur extraites.
 
         Raises:
-            ValueError: Si un token est mal formé ou si le type de zone est inconnu.
+            ValueError: Si un token est mal formé ou si le type
+                de zone est inconnu.
         """
         result = {}
         VALID_ZONES = ["normal", "restricted", "priority", "blocked"]
@@ -221,10 +238,13 @@ class MapParser:
                 )
 
             for z1, z2, _ in self.connections:
-                if (z1 == zone1 and z2 == zone2) or (z1 == zone2 and z2 == zone1):
+                if (
+                    (z1 == zone1 and z2 == zone2)
+                    or (z1 == zone2 and z2 == zone1)
+                ):
                     raise ValueError(
-                        f"Ligne {line_num}: Connexion en double détectée entre "
-                        f"'{zone1}' et '{zone2}'."
+                        f"Ligne {line_num}: Connexion en double "
+                        f"détectée entre '{zone1}' et '{zone2}'."
                     )
 
             known = [h[0] for h in self.hubs]
@@ -280,7 +300,9 @@ class MapParser:
             graph.add_zone(zone_obj)
 
         for z1, z2, capacity in self.connections:
-            conn_obj = Connection(zone1=z1, zone2=z2, max_link_capacity=capacity)
+            conn_obj = Connection(
+                zone1=z1, zone2=z2, max_link_capacity=capacity
+            )
             graph.add_connection(conn_obj)
 
         start_zone_name: Optional[str] = (

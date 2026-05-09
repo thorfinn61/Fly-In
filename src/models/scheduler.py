@@ -5,7 +5,8 @@ from .core import Graph, Drone
 
 
 class Scheduler:
-    """Assigne les chemins aux drones et résout les conflits de mouvement tour par tour.
+    """Assigne les chemins aux drones et résout les conflits
+    de mouvement tour par tour.
 
     Attributes:
         graph: Le graphe du réseau de zones.
@@ -26,16 +27,17 @@ class Scheduler:
         """Assigne un chemin à chaque drone sans chemin planifié.
 
         Calcule plusieurs chemins disjoints via le graphe, puis les distribue
-        en round-robin pour paralléliser les déplacements et éviter les bouchons.
+        en round-robin pour paralléliser les déplacements
+        et éviter les bouchons.
 
         Args:
             start: Nom de la zone de départ commune à tous les drones.
             end: Nom de la zone d'arrivée commune à tous les drones.
         """
-        # Trouver plusieurs chemins disjoints (par ex. 3) pour eviter les bouchons
+        # Trouver plusieurs chemins disjoints pour eviter les bouchons
         paths = self.graph.find_disjoint_paths(start, end, max_paths=3)
 
-        # Assigne les chemins en boucle (Round-Robin) pour paralleliser les drones
+        # Round-Robin pour paralleliser les drones
         path_idx = 0
         for drone in self.drones:
             if not drone.planned_path and drone.status != "arrived":

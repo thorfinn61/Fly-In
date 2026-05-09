@@ -55,7 +55,8 @@ class Simulation:
         self.renderer.setup_from_graph()
 
     def reset(self) -> None:
-        """Reparse le fichier de carte et réinitialise l'état de la simulation."""
+        """Reparse le fichier de carte et réinitialise
+        l'état de la simulation."""
         parser = MapParser(self.map_path)
         parser.parse()
         self.graph, self.drones = parser.build_models()
@@ -94,5 +95,6 @@ class Simulation:
         self.turn += 1
 
     def run(self) -> None:
-        """Lance la boucle principale Tkinter et démarre l'interface graphique."""
+        """Lance la boucle principale Tkinter
+        et démarre l'interface graphique."""
         self.renderer.root.mainloop()
